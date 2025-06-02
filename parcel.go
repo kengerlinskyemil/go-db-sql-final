@@ -2,7 +2,6 @@ package main
 
 import (
 	"database/sql"
-	"fmt"
 )
 
 type ParcelStore struct {
@@ -38,8 +37,7 @@ func (s ParcelStore) Get(number int) (Parcel, error) {
 		sql.Named("number", number)).
 		Scan(&p.Client, &p.Status, &p.Address, &p.CreatedAt)
 	if err != nil {
-		fmt.Println(err)
-		return p, err
+		return Parcel{}, err
 	}
 	p.Number = number
 	return p, nil
@@ -51,33 +49,21 @@ func (s ParcelStore) GetByClient(client int) ([]Parcel, error) {
 	var res []Parcel
 	rows, err := s.db.Query("select number, client, status, address, created_at from parcel where client = :client", sql.Named("client", client))
 	if err != nil {
-		fmt.Println(err)
 		return res, err
 	}
 	defer rows.Close()
 
 	for rows.Next() {
 		// заполните объект Parcel данными из таблицы
-		var resNumber, resClient int
-		var resStatus, resAddress, resCreatedAt string
-
-		err := rows.Scan(&resNumber, &resClient, &resStatus, &resAddress, &resCreatedAt)
+		p := Parcel{}
+		err := rows.Scan(&p.Number, &p.Client, &p.Status, &p.Address, &p.CreatedAt)
 		if err != nil {
-			fmt.Println(err)
-			return res, err
-		}
-		p := Parcel{
-			Number:    resNumber,
-			Client:    resClient,
-			Status:    resStatus,
-			Address:   resAddress,
-			CreatedAt: resCreatedAt,
+			return nil, err
 		}
 		res = append(res, p)
 	}
 	if err := rows.Err(); err != nil {
-		fmt.Println(err)
-		return res, err
+		return nil, err
 	}
 	return res, nil
 }
@@ -88,7 +74,6 @@ func (s ParcelStore) SetStatus(number int, status string) error {
 		sql.Named("status", status),
 		sql.Named("number", number))
 	if err != nil {
-		fmt.Println(err)
 		return err
 	}
 	return nil
@@ -101,7 +86,6 @@ func (s ParcelStore) SetAddress(number int, address string) error {
 		sql.Named("address", address),
 		sql.Named("number", number))
 	if err != nil {
-		fmt.Println(err)
 		return err
 	}
 
@@ -114,7 +98,6 @@ func (s ParcelStore) Delete(number int) error {
 	_, err := s.db.Exec("delete from parcel where number = :number and status = 'registered' ",
 		sql.Named("number", number))
 	if err != nil {
-		fmt.Println(err)
 		return err
 	}
 
